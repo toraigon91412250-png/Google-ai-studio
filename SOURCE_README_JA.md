@@ -4,12 +4,12 @@
 
 ## 開発・起動
 
-Node.js 22以上とnpmを用意してください。
+Node.js 22以上とBunを用意してください。
 
 ```sh
-npm ci
-npm run build
-npm run serve
+bun install --frozen-lockfile
+bun run build
+bun run serve
 ```
 
 ブラウザで `http://localhost:8080` を開いてください。`dist/OVERDRIVE.html` は全モードを含む単体HTMLです。`dist/index.html` は公開サイト用で、同じdist内のgame.bundle.jsなどと一緒に配信します。
@@ -24,4 +24,4 @@ npm run serve
 - `tests/`: 実行可能な動作チェック
 - `build.mjs`, `scripts/`: 単体HTMLと公開用データの生成
 
-`node_modules`、Git履歴、アカウント固有の配信設定、生成済みdistは含めていません。必要な配信用ファイルはnpm run buildですべて再生成できます。モデルJSONには元GLBのバイナリが含まれているため、ソースから欠けているモデルはありません。
+`node_modules`、Git履歴、アカウント固有の配信設定、生成済みdistは含めていません。必要な配信用ファイルはbun run buildですべて再生成できます。モデルJSONには元GLBのバイナリが含まれているため、ソースから欠けているモデルはありません。

@@ -13,6 +13,6 @@ with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as archive
 with zipfile.ZipFile(output) as archive:
  assert archive.testzip() is None
  names=set(archive.namelist())
- for name in ['src/game.js','src/titan/models.js','build.mjs','package-lock.json','SOURCE_README_JA.md']:
+ for name in ['src/game.js','src/titan/models.js','build.mjs','bun.lock','SOURCE_README_JA.md']:
   assert 'OVERDRIVE_SOURCE/'+name in names, name
 print(f'{output}: {output.stat().st_size} bytes; {len(names)} source files')

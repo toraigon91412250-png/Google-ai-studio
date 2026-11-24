@@ -10,13 +10,13 @@ PC操作: 右クリック長押しで左右ワイヤー、離すと解除。巨�
 
 Tで巨人化。巨人化中はWASD移動、SHIFT走行、SPACE跳躍、クリック/Fで拳、Tで人間に戻ります。ゲージ切れ/巨人体の耐久切れでも離脱。巨人を倒すと人間の耐久・ガス・雷槍・巨人化ゲージを補充します。超大型のとどめは立体機動でうなじへ。
 
-`npm run build`で公開用`dist/index.html`、進撃単体`dist/ODM_TITAN_RAID.html`、単体の本編`dist/OVERDRIVE.html`を生成。公開メニューは進撃のHTMLを必要時だけ読み込み、ダウンロード用HTMLにはモデルを内蔵しています。検証は`npm run test:titan`。[詳細](docs/TITAN_CITY_RAID_REBUILD_2026-11-15.md)。
+`bun run build`で公開用`dist/index.html`、進撃単体`dist/ODM_TITAN_RAID.html`、単体の本編`dist/OVERDRIVE.html`を生成。公開メニューは進撃のHTMLを必要時だけ読み込み、ダウンロード用HTMLにはモデルを内蔵しています。検証は`bun run test:titan`。[詳細](docs/TITAN_CITY_RAID_REBUILD_2026-11-15.md)。
 
 ## Σ / FRACTURE RAID（v8.1・新難易度）
 
 前回のΩを残したまま、新難易度Σを追加しました。Σは近接型・突進型中心で、射撃型は最大1体、浮遊射撃型は出現しません。再構築時のボス弾幕も3発に抑えています。F／専用ボタンで0.55秒だけ敵弾を捕獲し、最大6発をまとめて返撃。ダッシュで弾へ踏み込む捕獲にも対応します。6発返撃は衝撃波と防壁破壊を起こし、射線と通路を自分で開けます。青く光る継ぎ目の防壁は全武器でも破壊可能。左手の専用立体アーム、6セル表示、亀裂・破片を追加しました。
 
-ΩとΣはタイトルから別々に選択でき、記録も別々です。`npm run test:fracture` で編成、弾数、捕獲、実射、壁破壊、Ωとの分離を検証できます。詳しい仕様と検証限界は [Σ開発レポート](docs/FRACTURE_RAID_V8.md) を参照。
+ΩとΣはタイトルから別々に選択でき、記録も別々です。`bun run test:fracture` で編成、弾数、捕獲、実射、壁破壊、Ωとの分離を検証できます。詳しい仕様と検証限界は [Σ開発レポート](docs/FRACTURE_RAID_V8.md) を参照。
 
 ## Ω / RIFT RAID（v7.0）
 
@@ -26,13 +26,13 @@ Tで巨人化。巨人化中はWASD移動、SHIFT走行、SPACE跳躍、クリ�
 
 破壊炉・制圧端末・通過ゲート・標的マーカーは専用の立体モデルで表示。目的地の画面マーカーと距離表示、任務HUDを追加しました。既存の8種の地形構造×5種の戦場規模と、地形に連動する敵編成を継承しています。
 
-検証は `npm run test:omega`、`npm run test:world`、`npm run test:weapon-parity`。詳細と実行環境の限界は [RIFT RAID開発レポート](docs/RIFT_RAID_V7.md) に記録しています。
+検証は `bun run test:omega`、`bun run test:world`、`bun run test:weapon-parity`。詳細と実行環境の限界は [RIFT RAID開発レポート](docs/RIFT_RAID_V7.md) に記録しています。
 
 ## 全武器の進化（v6.0）
 
 パルスに続き、散弾砲・レール・ASTRA・狙撃銃・SEEKERにも専用強化を追加。新規20カード・10ルートで、コア→ルート選択→最終進化の3枚を取ると、性能と立体モデル・射撃演出が変わります。報酬画面の6武器／共通強化タブから育てる武器を選べます。未強化時の設定と、かんたんの補助は維持。狙撃銃は1発装填、EXPLOSIONは24発全消費です。
 
-仕様・数値・検証状況は [武器進化レポート](docs/ARSENAL_EVOLUTION_V6.md)。再検証は `npm run test:arsenal`。ビルド・新規統合・既存回帰のヘッドレス検証を通過しました。ブラウザ目視とiPhone実機・フレームレートは未確認です。
+仕様・数値・検証状況は [武器進化レポート](docs/ARSENAL_EVOLUTION_V6.md)。再検証は `bun run test:arsenal`。ビルド・新規統合・既存回帰のヘッドレス検証を通過しました。ブラウザ目視とiPhone実機・フレームレートは未確認です。
 
 ## 起動
 
@@ -70,7 +70,7 @@ PCは `http://localhost:8080/OVERDRIVE.html`、同じLAN上のiPhoneは `http://
 
 最終形態は威力4.3倍・100発・0.064秒間隔。連鎖型は最大5体へ雷撃、貫通型は4命中で次弾が8倍の貫通砲。銃の装甲・コア・加速器・射撃演出も変化します。現段階ではパルスを意図的に強くした実験です。
 
-再検証は `npm run test:pulse`。数値、モデル、テストと未確認事項は [開発レポート](docs/PULSE_EVOLUTION_V5_7.md) を参照してください。
+再検証は `bun run test:pulse`。数値、モデル、テストと未確認事項は [開発レポート](docs/PULSE_EVOLUTION_V5_7.md) を参照してください。
 
 ## 操作
 
@@ -150,19 +150,19 @@ v5.3.1では画面下から構える位置・前を向く角度・センサー�
 Node.js 20以上を推奨。依存関係の取得時のみネット接続が必要です。
 
 ```sh
-npm ci
-npm run build
-npm run test:phase
-npm run test:phantom-lance
-npm run test:seeker
-npm run test:training
-npm run test:weapon-parity
-npm run test:explosion
-npm run test:enemy-visuals
-npm run serve
+bun install --frozen-lockfile
+bun run build
+bun run test:phase
+bun run test:phantom-lance
+bun run test:seeker
+bun run test:training
+bun run test:weapon-parity
+bun run test:explosion
+bun run test:enemy-visuals
+bun run serve
 # 別ターミナルで
-npx playwright install chromium
-npm test
+bunx playwright install chromium
+bun run test
 node tests/production-smoke.cjs
 ```
 
@@ -181,4 +181,4 @@ node tests/production-smoke.cjs
 
 武器の役割は両難易度で共通です。パルスは距離減衰と適正距離コア表示、散弾砲はノックバック、レールは長距離ボーナスとカードによる撃破時分裂を持ちます。かんたんでは各種の補助が有効です。
 
-`npm run test:phase` はGPU描画を行わず、本体の戦闘・入力ハンドラ・進行処理を検査します。WebGLRendererとDOMを検査用の代替実装へ置き換えるため、実画面やタッチの押し心地を検証したものではありません。ブラウザ描画確認は `npm test` と実機テストで別途行います。
+`bun run test:phase` はGPU描画を行わず、本体の戦闘・入力ハンドラ・進行処理を検査します。WebGLRendererとDOMを検査用の代替実装へ置き換えるため、実画面やタッチの押し心地を検証したものではありません。ブラウザ描画確認は `bun run test` と実機テストで別途行います。
