@@ -6,7 +6,7 @@ export const PARKOUR_CONFIG = {
   wallMinHeightAboveFeet: 0.65,
   wallMinAirborneY: 0.12,
   wallRunSpeedMult: 1.35,
-  wallRunChargeMult: 2.0,
+  wallRunChargeMult: 1.85,
   wallRunReloadMult: 2.2,
   wallRunMaxFallVy: -1.65,
   wallRunAttachLiftVy: 1.15,
@@ -16,7 +16,7 @@ export const PARKOUR_CONFIG = {
   wallKickNormalSpeed: 13.5,
   wallKickForwardSpeed: 5.5,
   wallKickCooldown: 0.24,
-  wallKickChargeBoost: 14,
+  wallKickChargeBoost: 10,
   kickDecayRate: 5.8
 };
 

@@ -20,11 +20,19 @@ const {
   KINETIC_CONFIG,
   KINETIC_TIERS,
   FINISHER_CONFIG,
+  CHRONO_CONFIG,
+  ChronoBreakController,
   computeKineticProfile,
   computeKineticTier,
   stepKineticCharge,
   canTriggerKineticFinisher,
-  computeKineticFinisher
+  computeKineticFinisher,
+  resolveDualWieldWeapon,
+  computeOffhandRate,
+  computeDashReflectDamage,
+  computeDashReflectCount,
+  computeSectorScaling,
+  computeRushBossHpMult
 } = loadSrc('src/modes/kinetic-overdrive.js');
 
 const {
@@ -70,6 +78,7 @@ test('computeKineticProfile scales speed, fire rate, damage, reload, and special
   assert.ok(t3.coolMult < t2.coolMult);
   assert.equal(t3.ammoFree, true);
   assert.equal(t3.chainArc, true);
+  assert.equal(t3.dualWield, true);
 });
 
 test('stepKineticCharge accumulates faster in motion, doubles during wall-run, respects grace buffer, and ignites Tier 3 at 100%', () => {
@@ -87,7 +96,7 @@ test('stepKineticCharge accumulates faster in motion, doubles during wall-run, r
   const decayed = stepKineticCharge({ charge: 40, grace: 0, dt: 1, moving: false });
   assert.equal(decayed.charge, 40 - KINETIC_CONFIG.idleDecayPerSec);
 
-  // Crossing 100 triggers 10s Overdrive
+  // Crossing 100 triggers Overdrive at configured duration
   const ignited = stepKineticCharge({ charge: 98, grace: 1, dt: 0.5, moving: true });
   assert.equal(ignited.triggered, true);
   assert.equal(ignited.over, KINETIC_CONFIG.overdriveDuration);
@@ -214,3 +223,121 @@ test('stepWallRun stays inactive on ground, attaches airborne along walls, and c
   });
   assert.equal(blockedCooldown.active, false);
 });
+
+test('resolveDualWieldWeapon & computeOffhandRate enforce Option A (previousWeapon priority, PULSE/CRYO fallback, never duplicate)', () => {
+  assert.equal(resolveDualWieldWeapon({ active: false, mainWeapon: 2, previousWeapon: 0 }), -1);
+
+  // Main/Easy: uses previousWeapon when distinct, falls back to PULSE (0) if unswitched, else BREACH (1) if holding PULSE
+  assert.equal(resolveDualWieldWeapon({ active: true, mainWeapon: 3, previousWeapon: 2, abyss: false }), 2);
+  assert.equal(resolveDualWieldWeapon({ active: true, mainWeapon: 4, previousWeapon: null, abyss: false }), 0);
+  assert.equal(resolveDualWieldWeapon({ active: true, mainWeapon: 0, previousWeapon: 0, abyss: false }), 1);
+
+  // Abyss: falls back to CRYO-TESLA (1), or VORTEX SAW (0) if holding CRYO-TESLA
+  assert.equal(resolveDualWieldWeapon({ active: true, mainWeapon: 2, previousWeapon: null, abyss: true }), 1);
+  assert.equal(resolveDualWieldWeapon({ active: true, mainWeapon: 1, previousWeapon: null, abyss: true }), 0);
+  assert.equal(resolveDualWieldWeapon({ active: true, mainWeapon: 3, previousWeapon: 2, abyss: true }), 2);
+
+  // Offhand rates scale with Tier 3 coolMult and never bottom out below 0.075s
+  assert.ok(computeOffhandRate(0, 0.54, false) < computeOffhandRate(2, 0.54, false));
+  assert.ok(computeOffhandRate(3, 0.54, false) >= 0.075);
+  assert.ok(computeOffhandRate(1, 0.54, true) >= 0.08);
+});
+
+test('ChronoBreakController unlocks at 100% READY, dilates for 3.6s, and recharges +12% per kill', () => {
+  const c = new ChronoBreakController();
+  assert.equal(c.unlocked, false);
+  assert.equal(c.activate(), false);
+
+  c.unlock();
+  assert.equal(c.ready, true);
+  assert.equal(c.charge, 100);
+  assert.equal(c.activate(), true);
+  assert.equal(c.active, true);
+  assert.equal(c.ready, false);
+  assert.equal(c.remaining, CHRONO_CONFIG.duration);
+  assert.equal(c.activations, 1);
+
+  // Kills do not recharge while Chrono Break is active
+  c.onKill();
+  assert.equal(c.charge, 0);
+
+  // Tick down past duration
+  c.tick(CHRONO_CONFIG.duration + 0.1);
+  assert.equal(c.active, false);
+  assert.equal(c.remaining, 0);
+
+  // 8 kills x 12% = 96%, 9th kill caps cleanly at 100% READY
+  for (let i = 0; i < 8; i++) c.onKill();
+  assert.equal(c.charge, 96);
+  assert.equal(c.ready, false);
+  c.onKill();
+  assert.equal(c.charge, 100);
+  assert.equal(c.ready, true);
+});
+
+test('computeDashReflectDamage & computeDashReflectCount scale with Tier 2/3 and abyss_reflect relic level', () => {
+  assert.equal(computeDashReflectDamage(1, 0), 0);
+  assert.equal(computeDashReflectCount(1, 0), 0);
+
+  const t2 = computeDashReflectDamage(2, 0);
+  const t3 = computeDashReflectDamage(3, 0);
+  const t3Relic = computeDashReflectDamage(3, 2);
+  assert.ok(t2 > 0);
+  assert.ok(t3 > t2);
+  assert.ok(t3Relic > t3);
+
+  assert.equal(computeDashReflectCount(2, 0), 1);
+  assert.equal(computeDashReflectCount(3, 0), 2);
+  assert.equal(computeDashReflectCount(3, 1), 3);
+});
+
+test('computeSectorScaling, computeRushBossHpMult, and EASY stepKineticCharge preserve EASY while stiffening STD & ABYSS', () => {
+  // EASY retains 1.0x sector scaling, 0.78x Rush boss HP, 1.75x gauge rate, and 10s Overdrive
+  const easyW5 = computeSectorScaling({ mode: 'normal', difficulty: 'easy', wave: 5 });
+  assert.deepEqual(easyW5, {
+    hpMult: 1,
+    speedMult: 1,
+    cdMult: 1,
+    bulletSpeedMult: 1,
+    spawnInterval: 0.95,
+    extraEnemies: 0
+  });
+  assert.equal(computeRushBossHpMult({ easy: true, round: 5, wins: 4 }), 0.78);
+
+  const normMoved = stepKineticCharge({ charge: 0, dt: 1, moving: true, grounded: true, easy: false });
+  const easyMoved = stepKineticCharge({ charge: 0, dt: 1, moving: true, grounded: true, easy: true });
+  assert.ok(Math.abs(easyMoved.charge - normMoved.charge * KINETIC_CONFIG.easyChargeMult) < 1e-6);
+
+  const easyIgnited = stepKineticCharge({ charge: 99, grace: 1, dt: 0.5, moving: true, easy: true });
+  assert.equal(easyIgnited.triggered, true);
+  assert.equal(easyIgnited.over, KINETIC_CONFIG.easyOverdriveDuration);
+
+  // STD Wave 1 keeps baseline 1.0x HP & 0 extra enemies; Wave 5 scales aggressively
+  const stdW1 = computeSectorScaling({ mode: 'normal', difficulty: 'normal', wave: 1 });
+  assert.equal(stdW1.hpMult, 1);
+  assert.equal(stdW1.extraEnemies, 0);
+
+  const stdW5 = computeSectorScaling({ mode: 'normal', difficulty: 'normal', wave: 5 });
+  assert.equal(stdW5.hpMult, 1.75);
+  assert.equal(stdW5.speedMult, 1.2);
+  assert.equal(stdW5.cdMult, 0.76);
+  assert.equal(stdW5.bulletSpeedMult, 1.28);
+  assert.equal(stdW5.extraEnemies, 2);
+
+  // ABYSS escalates steeply from Sector 1 toward Sector 5 while STD stays at its baseline curve
+  const abyssW1 = computeSectorScaling({ mode: 'abyss', difficulty: 'normal', wave: 1 });
+  assert.equal(abyssW1.hpMult, 1.12);
+  assert.equal(abyssW1.extraEnemies, 0);
+
+  const abyssW5 = computeSectorScaling({ mode: 'abyss', difficulty: 'normal', wave: 5 });
+  assert.equal(abyssW5.hpMult, 2.38);
+  assert.equal(abyssW5.speedMult, 1.3);
+  assert.equal(abyssW5.cdMult, 0.65);
+  assert.equal(abyssW5.bulletSpeedMult, 1.42);
+  assert.equal(abyssW5.extraEnemies, 4);
+
+  // Normal Boss Rush HP scales from 1.15x (R1) up to 1.40x (R5 at 4 wins)
+  assert.equal(computeRushBossHpMult({ easy: false, round: 1, wins: 0 }), 1.15);
+  assert.equal(computeRushBossHpMult({ easy: false, round: 5, wins: 4 }), 1.4);
+});
+

@@ -31,8 +31,8 @@ function target(g,x,z,hp=100){const e=g.api.test.spawn('chaser',x,z);e.hp=e.max=
 {
  const g=start(),t=g.api.test,seen=new Set();
  for(let i=0;i<100;i++){t.choose('level');const cards=g.element('choices').children;assert.equal(cards.length,4);assert.equal(new Set(cards.map(c=>c.dataset.card)).size,4);for(const c of cards)seen.add(c.dataset.card);assert.equal(g.element('pulse-progress').hidden,true);assert.equal(g.element('pulse-progress').children.length,0);}
- for(const id of ['pulse_core','breach_core','rail_core','astra_core','lance_core','seeker_core','range','breach','fork','feed','pointblank','secondwind'])assert(seen.has(id),'random pool contains '+id);
- t.set({up:{pointblank:1,secondwind:1}});for(let i=0;i<20;i++){t.choose('level');assert(!g.element('choices').children.some(c=>['pointblank','secondwind'].includes(c.dataset.card)));}
+ for(const id of ['pulse_core','breach_core','rail_core','astra_core','lance_core','seeker_core','range','breach','fork','feed','pointblank','secondwind','chronobreak','kineticarm'])assert(seen.has(id),'random pool contains '+id);
+ t.set({up:{pointblank:1,secondwind:1,chronobreak:1,kineticarm:1}});for(let i=0;i<20;i++){t.choose('level');assert(!g.element('choices').children.some(c=>['pointblank','secondwind','chronobreak','kineticarm'].includes(c.dataset.card)));}
 }
 {
  const g=start(),t=g.api.test;t.gainXP(200);t.openReward();const card=g.element('choices').children[0];card.onclick();const pending=g.api.snapshot().pendingLevels;card.onclick();assert.equal(g.api.snapshot().pendingLevels,pending,'stale callback cannot consume a queued reward');assert.equal(g.api.snapshot().state,'upgrade');assert.equal(g.element('pulse-progress').children.length,0);
@@ -40,4 +40,4 @@ function target(g,x,z,hp=100){const e=g.api.test.spawn('chaser',x,z);e.hp=e.max=
 {
  const g=start(),t=g.api.test;t.choose('level');g.element('choices').children[0].onclick();assert.equal(g.api.snapshot().state,'playing');assert.equal(g.element('choices').children.length,0);assert.equal(g.element('pulse-progress').hidden,true);
 }
-console.log('AUGMENTS: combat effects, randomized arsenal/common offers, caps, no weapon selector and clean queued rewards passed');
+console.log('AUGMENTS: combat effects, randomized arsenal/common offers, caps, absorbed skill cards, no weapon selector and clean queued rewards passed');

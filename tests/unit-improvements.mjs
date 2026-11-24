@@ -27,6 +27,11 @@ const {
   recordCareerRun
 } = loadSrc('src/modes/telemetry.js');
 const { ABYSS_WEAPON_GUIDE, MODE_CONTROLS, MODE_GROUPS, WEAPON_GUIDE } = loadSrc('src/modes/catalog.js');
+const {
+  SUDDEN_MISSION_CONFIG,
+  SUDDEN_MISSION_KINDS,
+  SuddenMissionDirector
+} = loadSrc('src/modes/sudden-mission.js');
 
 function createMemoryStorage(seed = {}) {
   const map = new Map(Object.entries(seed));
@@ -122,11 +127,47 @@ test('migrateLegacyStorage copies overdrive-fracture-v1 to overdrive-fracture-in
   assert.equal(migrateLegacyStorage(storage), false);
 });
 
-test('Catalog separates campaign & challenge modes and documents right-click Titan wires', () => {
+test('Catalog exposes only the 4 consolidated modes and documents Dual-Wield, Chrono Break, and Kinetic Arm', () => {
   const allModes = MODE_GROUPS.flatMap((g) => g.modes.map((m) => m.id));
-  assert.deepEqual(allModes, ['normal', 'easy', 'abyss', 'x', 'omega', 'fracture', 'titan']);
+  assert.deepEqual(allModes, ['normal', 'easy', 'abyss', 'titan']);
+  assert.equal(Object.keys(MODE_CONTROLS).sort().join(','), 'abyss,easy,normal,titan');
   assert.equal(WEAPON_GUIDE.length, 6);
   assert.equal(ABYSS_WEAPON_GUIDE.length, 4);
+  assert.match(MODE_CONTROLS.normal.pc, /Q 時間減速.*F 弾捕獲/);
+  assert.match(MODE_CONTROLS.normal.pc, /二丁暴走/);
   assert.ok(MODE_CONTROLS.abyss.pc.includes('1–4'));
   assert.match(MODE_CONTROLS.titan.pc, /右クリック長押し/);
+});
+
+test('SuddenMissionDirector triggers only in eligible sectors 1-5, rewards Overdrive boost, and expires cleanly without penalty', () => {
+  const sm = new SuddenMissionDirector();
+  assert.equal(sm.canTrigger({ wave: 1, tutorialActive: true, bossActive: false, waveElapsed: 5, rng: () => 0.1 }), false);
+  assert.equal(sm.canTrigger({ wave: 6, tutorialActive: false, bossActive: true, waveElapsed: 5, rng: () => 0.1 }), false);
+  assert.equal(sm.canTrigger({ wave: 2, tutorialActive: false, bossActive: false, waveElapsed: 1.0, rng: () => 0.1 }), false);
+  assert.equal(sm.canTrigger({ wave: 2, tutorialActive: false, bossActive: false, waveElapsed: 4.0, rng: () => 0.2 }), true);
+  // Cannot re-trigger in the same wave
+  assert.equal(sm.canTrigger({ wave: 2, tutorialActive: false, bossActive: false, waveElapsed: 6.0, rng: () => 0.1 }), false);
+
+  const started = sm.begin({ wave: 2, kind: 'breach' });
+  assert.equal(started.active, true);
+  assert.equal(started.kind, 'breach');
+  assert.equal(started.needed, 2);
+
+  const step1 = sm.advance(1);
+  assert.equal(step1.type, 'step');
+  const step2 = sm.advance(1);
+  assert.equal(step2.type, 'complete');
+  assert.equal(step2.reward.charge, SUDDEN_MISSION_CONFIG.rewardCharge);
+  assert.equal(step2.reward.overdriveExtend, SUDDEN_MISSION_CONFIG.rewardOverdriveExtend);
+  assert.equal(sm.completedCount, 1);
+  assert.equal(sm.active, false);
+
+  // Second mission rotates kind and expires silently if timer runs out
+  const second = sm.begin({ wave: 3, rng: () => 0.25 });
+  assert.equal(SUDDEN_MISSION_KINDS.includes(second.kind), true);
+  assert.notEqual(second.kind, 'breach');
+  const exp = sm.tick(second.duration + 1);
+  assert.equal(exp.type, 'expired');
+  assert.equal(sm.expiredCount, 1);
+  assert.equal(sm.active, false);
 });

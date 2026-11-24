@@ -1,3 +1,4 @@
+const path=require('node:path'),{pathToFileURL}=require('node:url');
 const {test,expect}=require('@playwright/test');
 async function start(page){await page.goto('/OVERDRIVE.html?test=1');await page.locator('#sound').uncheck();await page.locator('#start').click();await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().state)).toBe('playing')}
 test('desktop movement, jump, weapons, reload, pause and death',async({page})=>{const errors=[];page.on('pageerror',e=>errors.push(e.message));await start(page);let z=(await page.evaluate(()=>overdrive.snapshot())).position.z;await page.keyboard.down('KeyW');await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().position.z),{intervals:[20],timeout:10000}).toBeLessThan(z);await page.keyboard.up('KeyW');await page.keyboard.press('Space');await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().position.y),{intervals:[20],timeout:10000}).toBeGreaterThan(0);await page.keyboard.press('Digit2');expect((await page.evaluate(()=>overdrive.snapshot())).weapon).toBe(1);await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().cool)).toBeLessThanOrEqual(0);await page.evaluate(()=>overdrive.test.shoot());expect((await page.evaluate(()=>overdrive.snapshot())).ammo[1]).toBe(9);await page.keyboard.press('KeyR');await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().ammo[1]),{timeout:10000}).toBe(10);await page.evaluate(()=>{overdrive.test.set({x:0,z:0,y:0,vy:0,ammo:[28,0,4],cool:0});overdrive.test.update(.016);overdrive.test.shoot()});await expect(page.locator('#reloadstatus')).toHaveText('RELOADING');await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().reloadPose.z)).toBeLessThan(-.15);await page.screenshot({path:'artifacts/pad-reload.png'});await page.keyboard.press('Escape');await expect(page.locator('#paneltitle')).toHaveText('一時停止');await page.locator('#resume').click();await page.evaluate(()=>overdrive.test.hurt(999));await expect(page.locator('#paneltitle')).toHaveText('再起動せよ。');expect(errors).toEqual([])});
@@ -65,7 +66,7 @@ test('boss shockwave hits ground, jump avoids it, ARC LINK connects consecutive 
  expect(result.firstHit-result.firstAfterArc).toBeCloseTo(15,5);
  expect(result.neighbor).toBeLessThan(65);
 });
-test('offline standalone file starts and has no remote requests',async({browser})=>{let page=await browser.newPage();let remote=[];page.on('request',r=>{if(/^https?:/.test(r.url()))remote.push(r.url())});await page.goto('file:///workspace/overdrive/dist/OVERDRIVE.html?test=1');await page.locator('#sound').uncheck();await page.click('#start');expect(await page.evaluate(()=>overdrive.snapshot().state)).toBe('playing');expect(remote).toEqual([]);await page.close()});
+test('offline standalone file starts and has no remote requests',async({browser})=>{let page=await browser.newPage();let remote=[];page.on('request',r=>{if(/^https?:/.test(r.url()))remote.push(r.url())});await page.goto(pathToFileURL(path.resolve(__dirname,'..','dist/OVERDRIVE.html')).href+'?test=1');await page.locator('#sound').uncheck();await page.click('#start');expect(await page.evaluate(()=>overdrive.snapshot().state)).toBe('playing');expect(remote).toEqual([]);await page.close()});
 
 test('XP orbs grant levels, queue every reward and freeze combat during cards',async({page})=>{await start(page);await page.evaluate(()=>{let e=overdrive.test.spawn('charger',0,12);overdrive.test.damage(e,10000);overdrive.test.update(.01)});expect((await page.evaluate(()=>overdrive.snapshot())).xp).toBe(18);await page.evaluate(()=>{overdrive.test.gainXP(100);overdrive.test.openReward()});let snap=await page.evaluate(()=>overdrive.snapshot());expect(snap.level).toBe(4);expect(snap.pendingLevels).toBe(2);await expect(page.locator('#choices button')).toHaveCount(4);await page.waitForTimeout(250);expect((await page.evaluate(()=>overdrive.snapshot())).runTime).toBe(snap.runTime);for(let n=0;n<3;n++)await page.locator('#choices button').first().click();expect((await page.evaluate(()=>overdrive.snapshot())).state).toBe('playing');expect((await page.evaluate(()=>overdrive.snapshot())).wave).toBe(1)});
 test('level and wave rewards are both offered; capped cards do not reappear',async({page})=>{await start(page);await page.evaluate(()=>{overdrive.test.set({xp:29,inv:999,up:{chain:3}});const e=overdrive.test.spawn('chaser',20,20);overdrive.test.damage(e,9999);overdrive.test.killWave();for(let i=0;i<150&&overdrive.snapshot().state==='playing';i++)overdrive.test.update(.01)});await expect(page.locator('#paneltag')).toContainText('LEVEL');expect(await page.locator('#choices').textContent()).not.toContain('ARC LINK');await page.locator('#choices button').first().click();await expect(page.locator('#paneltag')).toContainText('COMPLETE');await page.screenshot({path:'test-results/upgrade-v2.png'});await page.locator('#choices button').first().click();await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().state)).toBe('rebuilding');await page.locator('#rebuild-skip').click();await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().wave)).toBe(2)});
@@ -112,18 +113,39 @@ test('both difficulties use the reconstruction reactor',async({page})=>{await pa
 test('weapon roles and magazines match in easy with retained damage assist',async({page})=>{await page.goto('/OVERDRIVE.html?test=1');await page.locator('#difficulty').selectOption('normal');await page.locator('#sound').uncheck();await page.click('#start');let normal=await page.evaluate(()=>({mags:overdrive.snapshot().weaponMags,close:overdrive.test.pulseDamageAt(2),mid:overdrive.test.pulseDamageAt(12),far:overdrive.test.pulseDamageAt(40)}));expect(normal.mags).toEqual([50,10,6,24,1,6]);expect(normal.close).toBe(2);expect(normal.mid).toBe(7);expect(normal.far).toBe(0);await page.reload();await page.locator('#difficulty').selectOption('easy');await page.locator('#sound').uncheck();await page.click('#start');let easy=await page.evaluate(()=>({mags:overdrive.snapshot().weaponMags,pulse:overdrive.test.pulseDamageAt(40)}));expect(easy.mags).toEqual([50,10,6,24,1,6]);expect(easy.pulse).toBe(0)});
 test('shotgun pushes back and rail kill forks to nearby enemies',async({page})=>{await page.goto('/OVERDRIVE.html?test=1');await page.locator('#difficulty').selectOption('normal');await page.locator('#sound').uncheck();await page.click('#start');let shotgun=await page.evaluate(()=>{const t=overdrive.test;t.set({x:0,y:0,z:12,weapon:1,ammo:[50,10,6],cool:0});const e=t.spawn('charger',0,6);t.update(.016);t.shoot();return{z:e.mesh.position.z,hp:e.hp,ammo:overdrive.snapshot().ammo[1]}});expect(shotgun.z).toBeLessThan(6);expect(shotgun.hp).toBeLessThan(140);expect(shotgun.ammo).toBe(9);let rail=await page.evaluate(()=>{const t=overdrive.test;t.set({x:0,y:0,z:12,weapon:2,ammo:[50,10,6],cool:0,up:{fork:1}});const a=t.spawn('chaser',0,5),b=t.spawn('chaser',3,5);t.update(.016);t.shoot();return{a:a.hp,b:b.hp}});expect(rail.a).toBeLessThanOrEqual(0);expect(rail.b).toBeLessThan(65)});
 
-test('Ω raid opening, objective HUD, automatic shifts and redeal on desktop and mobile',async({browser})=>{
+test('4-mode catalog, Tier 3 Dual-Wield, Chrono Break, Kinetic Arm and Sudden Bonus Mission on desktop and mobile',async({browser})=>{
  for(const mobile of [false,true]){
   const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1280,height:720},isMobile:mobile,hasTouch:mobile});
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/OVERDRIVE.html?test=1');await page.locator('#difficulty').selectOption('omega');await page.locator('#sound').uncheck();await page.click('#start');
-  await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().state)).toBe('upgrade');
-  const opening=page.locator('#choices .omega-weapon-card');await expect(opening).toHaveCount(3);const options=await opening.evaluateAll(nodes=>nodes.map(n=>Number(n.dataset.weapon)));expect(options.every(i=>i>=0&&i<6)).toBeTruthy();await opening.first().click();await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().state)).toBe('playing');
-  await expect(page.locator('#raid-mission')).toBeVisible();await expect(page.locator('#raid-title')).not.toHaveText('');const before=await page.evaluate(()=>overdrive.snapshot());expect(before.omega.raid.active).toBeTruthy();
-  await page.evaluate(()=>overdrive.test.omegaShift());await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().omega.raid.round),{timeout:8000}).toBeGreaterThan(before.omega.raid.round);await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().state)).toBe('playing');
-  const after=await page.evaluate(()=>overdrive.snapshot());expect(after.weapon).not.toBe(before.weapon);expect(after.world.layoutSeed).not.toBe(before.world.layoutSeed);await expect(page.locator('#panel')).toBeHidden();await expect(page.locator('#choices .omega-weapon-card')).toHaveCount(0);await expect(page.locator('#raid-reroll')).toBeEnabled();
-  if(mobile)await page.locator('#raid-reroll').click();else await page.keyboard.press('q');
-  const rerolled=await page.evaluate(()=>overdrive.snapshot());expect(rerolled.weapon).not.toBe(after.weapon);expect(rerolled.omega.raid.rerollAvailable).toBeFalsy();await expect(page.locator('#raid-reroll')).toBeDisabled();
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();if(!mobile)await page.screenshot({path:'artifacts/browser-qa/omega-rift-raid.png'});expect(errors).toEqual([]);await context.close();
+  await page.goto('/OVERDRIVE.html?test=1');
+  const modes=await page.locator('#difficulty option').evaluateAll(opts=>opts.map(o=>o.value));
+  expect(modes).toEqual(['normal','easy','abyss','titan']);
+  const cards=await page.locator('#mode-cards [data-mode]').evaluateAll(nodes=>nodes.map(n=>n.dataset.mode));
+  expect(cards).toEqual(['normal','easy','abyss','titan']);
+  if(mobile)await page.locator('#device-mobile').check();
+  await page.locator('#difficulty').selectOption('normal');await page.locator('#sound').uncheck();await page.click('#start');
+  await expect.poll(()=>page.evaluate(()=>overdrive.snapshot().state)).toBe('playing');
+  await page.evaluate(()=>{
+   const t=overdrive.test;
+   t.clearEnemies();t.holdSpawns();
+   t.weapon(3);t.weapon(0);
+   t.set({x:0,y:0,z:12,hp:65,max:100,charge:100,over:8.5,up:{chronobreak:1,kineticarm:1}});
+   t.update(.016);
+  });
+  await expect(page.locator('#dual-wield-pill')).toBeVisible();
+  await expect(page.locator('#x-break')).toBeVisible();
+  await expect(page.locator('#kinetic-hud')).toBeVisible();
+  expect((await page.evaluate(()=>overdrive.snapshot().dualWield))).toMatchObject({active:true,leftWeapon:3});
+  if(mobile)await page.locator('#x-break').click();else await page.keyboard.press('q');
+  expect((await page.evaluate(()=>overdrive.snapshot().chrono.active))).toBe(true);
+  if(mobile)await page.locator('#kinetic-action').click();else await page.keyboard.press('f');
+  expect((await page.evaluate(()=>overdrive.snapshot().kineticArm.catching))).toBe(true);
+  await page.evaluate(()=>overdrive.test.triggerSuddenMission('breach'));
+  await expect(page.locator('#raid-mission')).toBeVisible();
+  await expect(page.locator('#raid-title')).toContainText('緊急破壊指令');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
+  if(!mobile)await page.screenshot({path:'artifacts/browser-qa/overdrive-consolidated.png'});
+  expect(errors).toEqual([]);
+  await context.close();
  }
 });

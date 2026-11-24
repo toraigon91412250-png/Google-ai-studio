@@ -5,7 +5,7 @@ export const MODE_GROUPS = [
     id: 'campaign',
     title: 'CAMPAIGN / 本編キャンペーン',
     modes: [
-      { id: 'normal', code: 'STD', name: '標準キャンペーン', tag: '6区画 + ボスラッシュ' },
+      { id: 'normal', code: 'STD', name: '標準キャンペーン', tag: '6区画 + 突発任務 + 二丁暴走' },
       { id: 'easy', code: 'EASY', name: 'かんたん / 練習付', tag: '操作練習 + 緩やか難度' }
     ]
   },
@@ -13,10 +13,7 @@ export const MODE_GROUPS = [
     id: 'challenge',
     title: 'SPECIAL OPS / チャレンジ作戦',
     modes: [
-      { id: 'abyss', code: 'Ψ', name: 'ABYSS PROTOCOL', badge: 'FLAGSHIP', tag: '異界4武器 · 遺物18種 · 全6区画' },
-      { id: 'x', code: 'X', name: 'TIME HEIST', tag: '時間強奪 + 減速BREAK' },
-      { id: 'omega', code: 'Ω', name: 'RIFT RAID', tag: '30秒任務 + 武器自動交代' },
-      { id: 'fracture', code: 'Σ', name: 'FRACTURE RAID', tag: '近接捕獲返撃 + 壁破壊' },
+      { id: 'abyss', code: 'Ψ', name: 'ABYSS PROTOCOL', badge: 'FLAGSHIP', tag: '異界4武器 · 遺物21種 · 全6区画' },
       { id: 'titan', code: 'ODM', name: '進撃 / 巨人討伐', tag: '立体機動 + 雷装討伐' }
     ]
   }
@@ -28,7 +25,7 @@ export const WEAPON_GUIDE = [
     name: 'PULSE / パルス',
     role: '連射・中近距離',
     mag: '50発 (進化100発)',
-    spec: '中距離で最大威力。3枚進化で電撃連鎖型または貫通ビーム型へ分岐。'
+    spec: '中距離で最大威力。3枚進化で電撃連鎖型または貫通ビーム型へ分岐。Tier 3 二丁持ち基準銃。'
   },
   {
     slot: '2',
@@ -49,21 +46,21 @@ export const WEAPON_GUIDE = [
     name: 'ASTRA × VANTA',
     role: 'チャージ・範囲制圧',
     mag: '24発 (移動補充)',
-    spec: '長押し→離しで10発NOVA、24発で照準地点を焼き払う最終奥義EXPLOSION。'
+    spec: '長押し→離しで10発NOVA、24発で最終奥義EXPLOSION。左手展開時は即時エネルギーボルト連射。'
   },
   {
     slot: '5',
     name: 'PHANTOM LANCE',
     role: '精密・弱点狙撃',
     mag: '1発 (コア×2.2)',
-    spec: '右クリック(PC) / 右画面タップ(スマホ)で3×/6×照準。単発高威力。'
+    spec: '右クリックで3×/6×照準。左手展開時はスコープ不要で即時連射レーザーを発射。'
   },
   {
     slot: '6',
     name: 'SEEKER / 追尾弾',
     role: '複数ロック・追尾',
     mag: '6発 (最大3体ロック)',
-    spec: '敵に照準を0.22秒合わせると自動ロックし、多弾頭を一斉発射。'
+    spec: '0.22秒照準で自動ロック。左手展開時は2発同時追尾ミサイルを即発射。'
   }
 ];
 
@@ -80,7 +77,7 @@ export const ABYSS_WEAPON_GUIDE = [
     name: 'CRYO-TESLA / 凍結電弧',
     role: '45%減速・連鎖',
     mag: '22発 (2連鎖)',
-    spec: '命中した敵を冷却・減速させ、周囲2体へ電弧連鎖。凍結中の敵には威力上昇＋分裂阻止。'
+    spec: '命中した敵を冷却・減速させ、周囲2体へ電弧連鎖。Tier 3 二丁持ち基準銃。'
   },
   {
     slot: '3',
@@ -100,28 +97,16 @@ export const ABYSS_WEAPON_GUIDE = [
 
 export const MODE_CONTROLS = {
   normal: {
-    pc: 'WASD / 矢印 移動 · 左クリック 射撃 · 右クリック 狙撃照準 · SPACE ジャンプ/壁蹴り · 壁近く空中でWALL RUN · SHIFT ダッシュ · C スライド · G 必殺技 · 1–6 武器 · R リロード · H 操作一覧 · ESC 一時停止',
-    mobile: '左スティック 移動 · 右ドラッグ 照準 · FIRE 射撃 · 壁近くジャンプで壁走り/壁蹴り · OVERDRIVE中TAPで必殺技 · JUMP/DASH/SLIDE/GUN/リロード'
+    pc: 'WASD / 矢印 移動 · 左クリック 射撃(Tier3は二丁暴走) · 右クリック 狙撃照準 · SPACE ジャンプ/壁蹴り · 壁近く空中でWALL RUN · SHIFT ダッシュ(GEAR II〜弾反射) · C スライド · G 必殺技 · Q 時間減速(カード解放時) · F 弾捕獲(カード解放時) · 1–6 武器 · R リロード · H 操作一覧 · ESC 一時停止',
+    mobile: '左スティック 移動 · 右ドラッグ 照準 · FIRE 射撃(Tier3は二丁暴走) · 壁走り/壁蹴り · DASH(GEAR II〜弾反射) · OVERDRIVE中TAP必殺技 · BREAK/捕獲ボタン(解放時) · JUMP/SLIDE/GUN/リロード'
   },
   easy: {
-    pc: 'WASD 移動 · 左クリック 射撃 · 右クリック 狙撃照準 · SPACE ジャンプ/壁蹴り · SHIFT ダッシュ · C スライド · G 必殺技 · 1–6 武器 · R リロード · H 操作一覧 · ESC 一時停止',
-    mobile: '左スティック 移動 · 右ドラッグ 照準 · FIRE 射撃 · 壁走り/必殺技対応 · 最初は無敵の操作練習から開始（いつでもスキップ可）'
+    pc: 'WASD 移動 · 左クリック 射撃(Tier3は二丁暴走) · 右クリック 狙撃照準 · SPACE ジャンプ/壁蹴り · SHIFT ダッシュ(弾反射) · C スライド · G 必殺技 · Q 時間減速(解放時) · F 弾捕獲(解放時) · 1–6 武器 · R リロード · H 操作一覧 · ESC 一時停止',
+    mobile: '左スティック 移動 · 右ドラッグ 照準 · FIRE 射撃 · 壁走り/必殺技/反射ダッシュ対応 · 最初は無敵の操作練習から開始（いつでもスキップ可）'
   },
   abyss: {
-    pc: 'WASD / 矢印 移動 · 左クリック 攻撃 · 1–4 異界武器切替 · R リロード · SPACE ジャンプ/壁蹴り · SHIFT ダッシュ · C スライド · G 必殺技 · H 操作一覧 · ESC 一時停止',
-    mobile: '左スティック 移動 · 右ドラッグ 照準 · FIRE 攻撃 · 画面下ボタン / GUN で4種の異界武器 · OVERDRIVE中TAP必殺技 · JUMP/DASH/SLIDE'
-  },
-  x: {
-    pc: 'WASD 移動 · 左クリック 射撃 · Q BREAK(時間減速) · G 必殺技 · SPACE 二段ジャンプ/壁蹴り · SHIFT ダッシュ(弾反射) · C スライド · 1–6 武器 · R リロード',
-    mobile: '左スティック 移動 · FIRE 射撃 · BREAKボタン 時間減速 · TAP必殺技 · 二段ジャンプ / 壁蹴り / ダッシュで弾反射'
-  },
-  omega: {
-    pc: 'WASD 移動 · 左クリック 射撃 · 1–7 武器切替 · Q 武器引き直し · E 達成後すぐ次へ · G 必殺技 · R リロード · SPACE ジャンプ/壁蹴り · SHIFT ダッシュ',
-    mobile: '左スティック 移動 · 右ドラッグ 照準 · FIRE 射撃 · TAP必殺技 · 引き直し/次へボタン · GUN 切替'
-  },
-  fracture: {
-    pc: 'WASD 移動 · F 捕獲→返撃(最大6発) · G 必殺技 · 1–7 武器切替 · Q 引き直し · E 脱出 · SHIFT 弾捕獲ダッシュ · R リロード · SPACE 壁蹴り · C スライド',
-    mobile: '左スティック 移動 · FIRE 射撃 · 捕獲→返撃ボタン · TAP必殺技 · Q引き直し / E次へ · GUN 切替'
+    pc: 'WASD / 矢印 移動 · 左クリック 攻撃(Tier3は二丁暴走) · 1–4 異界武器切替 · R リロード · SPACE ジャンプ/壁蹴り · SHIFT ダッシュ(GEAR II〜弾反射) · C スライド · G 必殺技 · Q 時間減速 / F 弾捕獲(遺物解放時) · H 操作一覧 · ESC 一時停止',
+    mobile: '左スティック 移動 · 右ドラッグ 照準 · FIRE 攻撃(Tier3は二丁暴走) · 画面下ボタン/GUN で異界4武器 · OVERDRIVE中TAP必殺技 · BREAK/捕獲(遺物解放時)'
   },
   titan: {
     pc: '右クリック長押し 左右ワイヤー · Q/E 単発ワイヤー · SHIFT ガス噴射 · SPACE ジャンプ/浮上 · 左クリック/F 斬撃 · R 雷装 · B 刃交換 · V 視点 · WASD 移動',

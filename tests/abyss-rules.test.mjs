@@ -38,16 +38,20 @@ const {
   stepVortexPull
 } = loadSrc('src/modes/abyss-rules.js');
 
-test('Abyss mode defines 4 distinct weapons, 5 enemy archetypes, 6 sectors, and 18 relic cards', () => {
+test('Abyss mode defines 4 distinct weapons, 5 enemy archetypes, 6 sectors, and 21 relic cards', () => {
   assert.equal(ABYSS_WEAPONS.length, 4);
   assert.equal(ABYSS_WEAPON_LABELS.length, 4);
   assert.deepEqual(Object.keys(ABYSS_ENEMIES), ['stalker', 'aegis', 'weaver', 'splitter', 'architect']);
   assert.equal(ABYSS_WAVES.length, 6);
   assert.equal(ABYSS_SECTOR_TITLES.length, 6);
   assert.ok(ABYSS_WAVES[5].includes('architect'));
-  assert.equal(ABYSS_ENEMIES.architect.hp, 3800);
-  assert.equal(ABYSS_UPGRADES.length, 18);
-  assert.equal(new Set(ABYSS_UPGRADES.map((u) => u.id)).size, 18);
+  assert.equal(ABYSS_ENEMIES.architect.hp, 7400);
+  assert.equal(ABYSS_UPGRADES.length, 21);
+  assert.equal(new Set(ABYSS_UPGRADES.map((u) => u.id)).size, 21);
+  const byId = Object.fromEntries(ABYSS_UPGRADES.map((u) => [u.id, u]));
+  assert.equal(byId.abyss_chrono?.maxLevel, 1);
+  assert.equal(byId.abyss_kinetic_arm?.maxLevel, 1);
+  assert.equal(byId.abyss_reflect?.maxLevel, 1);
 });
 
 test('VORTEX SAW scales with ricochets, bleed relic, and twin spread angles', () => {
@@ -173,12 +177,14 @@ test('VOID ARCHITECT Phase I & II transitions deterministically with awaken, las
     }
   }
   const twinLaser = seenPhase2.find((e) => e.type === 'laser_sweep');
-  assert.ok(twinLaser && twinLaser.twin === true);
+  assert.ok(twinLaser && twinLaser.twin === true && twinLaser.triple === true && twinLaser.delay === 0.74);
+  const mortars2 = seenPhase2.find((e) => e.type === 'mortars');
+  assert.ok(mortars2 && mortars2.count === 7 && mortars2.delay === 0.72);
   const exposed2 = seenPhase2.find((e) => e.type === 'exposed');
-  assert.ok(exposed2 && Array.isArray(exposed2.summon) && exposed2.summon.length === 2);
+  assert.ok(exposed2 && Array.isArray(exposed2.summon) && exposed2.summon.length === 3);
 });
 
-test('All 18 Abyss relic cards respect maxLevel caps and weapon scaling helpers', () => {
+test('All 21 Abyss relic cards respect maxLevel caps and weapon scaling helpers', () => {
   assert.equal(abyssMagSize(0, { abyss_saw: 2 }), 12);
   assert.equal(abyssMagSize(1, { abyss_cryo: 1 }), 28);
   assert.equal(abyssMagSize(2, { abyss_vortex: 2 }), 6);

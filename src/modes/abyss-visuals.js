@@ -52,7 +52,40 @@ export function createAbyssWeaponViewmodels(parent) {
 
   const models = [];
   const muzzles = [];
-  const animated = { sawSpinner: null, cryoTips: [], vortexOrb: null, vortexRing: null, scytheBlade: null };
+  const animated = {
+    sawSpinner: null,
+    cryoTips: [],
+    cryoTipsBase: [],
+    cryoRings: null,
+    vortexOrb: null,
+    vortexRing: null,
+    vortexRingMat: null,
+    scytheBlade: null
+  };
+
+  // Sync / Resonance Halo Aura mounted near barrel
+  const syncAura = new T.Group();
+  syncAura.position.set(0, 0.02, -0.44);
+  syncAura.visible = false;
+  const syncOuterMat = new T.MeshBasicMaterial({
+    color: 0xff7ce6,
+    transparent: true,
+    opacity: 0.72,
+    depthWrite: false,
+    blending: T.AdditiveBlending
+  });
+  const syncInnerMat = new T.MeshBasicMaterial({
+    color: 0xffdf7a,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+    blending: T.AdditiveBlending
+  });
+  const syncOuterRing = new T.Mesh(new T.TorusGeometry(0.16, 0.014, 6, 24), syncOuterMat);
+  const syncInnerRing = new T.Mesh(new T.TorusGeometry(0.125, 0.01, 6, 20), syncInnerMat);
+  syncInnerRing.rotation.x = 0.55;
+  syncAura.add(syncOuterRing, syncInnerRing);
+  root.add(syncAura);
 
   // 0: VORTEX SAW — Twin fork rails + live serrated saw disc
   {
@@ -100,17 +133,21 @@ export function createAbyssWeaponViewmodels(parent) {
     coreCyl.rotation.x = Math.PI / 2;
     coreCyl.position.set(0, 0.02, -0.34);
     g.add(coreCyl);
+    const ringGroup = new T.Group();
     for (let j = 0; j < 3; j++) {
       const ring = new T.Mesh(new T.TorusGeometry(0.068, 0.011, 6, 16), gunmetal);
       ring.position.set(0, 0.02, -0.22 - j * 0.11);
-      g.add(ring);
+      ringGroup.add(ring);
     }
+    g.add(ringGroup);
+    animated.cryoRings = ringGroup;
     for (const [px, py] of [[0, 0.1], [-0.085, -0.035], [0.085, -0.035]]) {
       addBox(g, px, py, -0.45, 0.026, 0.026, 0.42, gunmetal);
       const tip = new T.Mesh(new T.OctahedronGeometry(0.024, 0), cryoGlow);
       tip.position.set(px, py, -0.68);
       g.add(tip);
       animated.cryoTips.push(tip);
+      animated.cryoTipsBase.push([px, py, -0.68]);
     }
     addMark(g, 'CRYO-02', '#6cecff', 0, 0.07, 0.03);
     const muzzle = new T.Object3D();
@@ -134,12 +171,14 @@ export function createAbyssWeaponViewmodels(parent) {
     const orb = new T.Mesh(new T.OctahedronGeometry(0.065, 1), vortexGlow);
     orb.position.set(0, 0.03, -0.44);
     g.add(orb);
-    const ring = new T.Mesh(new T.TorusGeometry(0.095, 0.01, 6, 20), new T.MeshStandardMaterial({ color: 0xf0c9ff, emissive: 0xc07dff, emissiveIntensity: 1.5 }));
+    const vortexRingMat = new T.MeshStandardMaterial({ color: 0xf0c9ff, emissive: 0xc07dff, emissiveIntensity: 1.5 });
+    const ring = new T.Mesh(new T.TorusGeometry(0.095, 0.01, 6, 20), vortexRingMat);
     ring.position.set(0, 0.03, -0.44);
     ring.rotation.x = 0.7;
     g.add(ring);
     animated.vortexOrb = orb;
     animated.vortexRing = ring;
+    animated.vortexRingMat = vortexRingMat;
     addMark(g, 'VOID-03', '#c07dff', 0, 0.075, 0.04);
     const muzzle = new T.Object3D();
     muzzle.position.set(0, 0.03, -0.66);
@@ -183,36 +222,121 @@ export function createAbyssWeaponViewmodels(parent) {
     root,
     models,
     muzzles,
+    syncAura,
     triggerSwing() {
       swingTime = 0.28;
     },
-    update(dt, { active = false, weapon = 0, time = 0, recoil = 0, reloadPhase = 0, swapAnim = 0 } = {}) {
+    update(dt, {
+      active = false,
+      weapon = 0,
+      time = 0,
+      recoil = 0,
+      reloadPhase = 0,
+      swapAnim = 0,
+      heat = 0,
+      isLeftHand = false,
+      dualWieldSync = false,
+      resonanceActive = false
+    } = {}) {
       root.visible = !!active;
       if (!active) return;
       models.forEach((m, i) => {
         m.visible = i === weapon;
       });
+      const clampedHeat = Math.max(0, Math.min(1, heat || 0));
+      const rp = Math.max(0, Math.min(1, reloadPhase || 0));
+      const swapRatio = Math.max(0, Math.min(1, (swapAnim || 0) / 0.25));
       swingTime = Math.max(0, swingTime - dt);
+
+      // Barrel heat glow modulation
+      sawGlow.emissiveIntensity = 1.7 + clampedHeat * 2.4 + (weapon === 0 ? recoil * 4.5 : 0);
+      sawGlow.color.setHex(clampedHeat > 0.65 ? 0xffc6d9 : 0xff5a8a);
+      cryoGlow.emissiveIntensity = 1.7 + clampedHeat * 2.3 + (weapon === 1 ? recoil * 4.0 : 0);
+      cryoGlow.color.setHex(clampedHeat > 0.65 ? 0xd9fcff : 0x8ef3ff);
+      vortexGlow.emissiveIntensity = 1.85 + clampedHeat * 2.5 + (weapon === 2 ? recoil * 3.8 : 0);
+      if (animated.vortexRingMat) {
+        animated.vortexRingMat.emissiveIntensity = 1.5 + clampedHeat * 2.2;
+      }
+      scytheGlow.emissiveIntensity = 1.8 + clampedHeat * 2.5 + (swingTime > 0 ? 1.4 : 0);
+
+      // Per-weapon mechanical animations (heat, reload, swing)
       if (animated.sawSpinner) {
-        animated.sawSpinner.rotation.y += dt * (weapon === 0 ? 12 + recoil * 40 : 4);
+        const spinRate = weapon === 0 && rp > 0 ? -36 : (weapon === 0 ? 14 + recoil * 44 + clampedHeat * 26 : 4);
+        animated.sawSpinner.rotation.y += dt * spinRate;
+        animated.sawSpinner.scale.setScalar(1 + clampedHeat * 0.14);
+      }
+      if (animated.cryoRings) {
+        animated.cryoRings.position.z = weapon === 1 ? rp * 0.14 : 0;
       }
       if (animated.cryoTips.length) {
+        const flare = weapon === 1 ? rp * 0.032 + clampedHeat * 0.015 : 0;
         for (let i = 0; i < animated.cryoTips.length; i++) {
-          animated.cryoTips[i].rotation.z = time * 4 + i * 2;
+          const tip = animated.cryoTips[i];
+          const base = animated.cryoTipsBase[i];
+          tip.rotation.z = time * (4 + clampedHeat * 6) + i * 2;
+          if (base) {
+            const len = Math.hypot(base[0], base[1]) || 1;
+            tip.position.set(base[0] + (base[0] / len) * flare, base[1] + (base[1] / len) * flare, base[2]);
+          }
+          tip.scale.setScalar(1 + clampedHeat * 0.25);
         }
       }
       if (animated.vortexOrb && animated.vortexRing) {
-        animated.vortexOrb.rotation.y += dt * 3.5;
-        animated.vortexRing.rotation.z += dt * 5;
-        animated.vortexRing.rotation.x = 0.7 + Math.sin(time * 3) * 0.25;
+        animated.vortexOrb.rotation.y += dt * (3.5 + clampedHeat * 6);
+        const orbScale = weapon === 2 && rp > 0 ? Math.max(0.25, 1 - rp * 0.68) : 1 + clampedHeat * 0.22 + Math.sin(time * 8) * clampedHeat * 0.08;
+        animated.vortexOrb.scale.setScalar(orbScale);
+        animated.vortexRing.rotation.z += dt * (weapon === 2 && rp > 0 ? 18 : 5 + clampedHeat * 10);
+        animated.vortexRing.rotation.x = 0.7 + Math.sin(time * (3 + clampedHeat * 4)) * 0.25;
       }
       if (animated.scytheBlade) {
         const t = swingTime > 0 ? Math.sin((1 - swingTime / 0.28) * Math.PI) : 0;
-        animated.scytheBlade.rotation.set(-t * 0.75, t * 0.45, 0.25 + t * 1.15);
+        const reloadSpin = weapon === 3 ? rp * Math.PI * 0.85 : 0;
+        animated.scytheBlade.rotation.set(-t * 0.78 - rp * (weapon === 3 ? 0.35 : 0), t * 0.48, 0.25 + t * 1.18 + reloadSpin);
         animated.scytheBlade.position.set(-t * 0.24, 0, -t * 0.18);
       }
-      root.position.set(0.32 + Math.sin(time * 8) * 0.008, -0.28 - recoil * 0.5 + reloadPhase * 0.08 - swapAnim, -0.55 + recoil);
-      root.rotation.set(-recoil * 0.6, 0, reloadPhase > 0 ? -0.18 : recoil * 0.18);
+
+      // Sync aura / resonance halo
+      const showAura = !!dualWieldSync || !!isLeftHand || !!resonanceActive;
+      syncAura.visible = showAura;
+      if (showAura) {
+        syncAura.position.z = weapon === 3 ? -0.58 : -0.44;
+        syncOuterRing.rotation.z += dt * (dualWieldSync ? 4.8 : 3.2);
+        syncInnerRing.rotation.y -= dt * (dualWieldSync ? 6.4 : 4.2);
+        const auraScale = 0.92 + Math.sin(time * 9) * 0.08 + clampedHeat * 0.18 + recoil * 0.85;
+        syncAura.scale.setScalar(auraScale);
+        syncOuterMat.color.setHex(isLeftHand || dualWieldSync ? 0xff7ce6 : 0x7effdf);
+        syncInnerMat.color.setHex(isLeftHand || dualWieldSync ? 0xffdf7a : 0xe66bff);
+        syncOuterMat.opacity = dualWieldSync ? 0.85 : 0.62;
+      }
+
+      // Per-weapon reload/swap mechanical pose
+      let rx = -recoil * 0.6 - swapRatio * 0.25;
+      let ry = 0;
+      let rz = recoil * 0.18 + swapRatio * 0.45;
+      let py = -0.28 - recoil * 0.5 - swapAnim;
+      if (rp > 0) {
+        if (weapon === 0) {
+          rx -= rp * 0.34;
+          rz -= rp * 0.28;
+          py += rp * 0.05;
+        } else if (weapon === 1) {
+          rz += rp * 0.34;
+          py += rp * 0.06;
+        } else if (weapon === 2) {
+          rx += rp * 0.3;
+          rz -= rp * 0.15;
+          py += rp * 0.09;
+        } else {
+          rx -= rp * 0.36;
+          ry += rp * 0.22;
+          py += rp * 0.06;
+        }
+      }
+
+      const sideSign = isLeftHand ? -1 : 1;
+      const swayX = Math.sin(time * 8) * 0.008;
+      root.position.set(sideSign * (0.32 + swayX), py, -0.55 + recoil);
+      root.rotation.set(rx, sideSign * ry, sideSign * rz);
       root.scale.setScalar(0.9);
     }
   };
@@ -417,6 +541,11 @@ export function createSingularityOrbMesh() {
 export function createVortexFieldMesh(radius) {
   const g = new T.Group();
   const core = new T.Mesh(new T.SphereGeometry(0.75, 16, 12), new T.MeshBasicMaterial({ color: 0x160424 }));
+  const coreRim = new T.Mesh(
+    new T.TorusGeometry(0.84, 0.055, 6, 22),
+    new T.MeshBasicMaterial({ color: 0xf7e8ff, transparent: true, opacity: 0.92, depthWrite: false, blending: T.AdditiveBlending })
+  );
+  coreRim.rotation.x = Math.PI / 2;
   const horizon = new T.Mesh(
     new T.TorusGeometry(radius * 0.72, 0.14, 6, 28),
     new T.MeshBasicMaterial({ color: 0xc07dff, transparent: true, opacity: 0.85, depthWrite: false, blending: T.AdditiveBlending })
@@ -427,25 +556,31 @@ export function createVortexFieldMesh(radius) {
     new T.MeshBasicMaterial({ color: 0xff80e5, transparent: true, opacity: 0.9, depthWrite: false, blending: T.AdditiveBlending })
   );
   ring2.rotation.x = 0.7;
-  g.add(core, horizon, ring2);
+  g.add(core, coreRim, horizon, ring2);
   return { group: g, horizon, ring2 };
 }
 
 export function createScytheSlashMesh(radius = 3.2) {
   const g = new T.Group();
   const arc = new T.Mesh(
-    new T.TorusGeometry(radius, 0.13, 6, 28, Math.PI * 0.72),
-    new T.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.92, depthWrite: false, blending: T.AdditiveBlending })
+    new T.TorusGeometry(radius, 0.15, 6, 30, Math.PI * 0.76),
+    new T.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.95, depthWrite: false, blending: T.AdditiveBlending })
   );
   arc.rotation.x = Math.PI / 2;
-  arc.rotation.z = -Math.PI * 0.36;
+  arc.rotation.z = -Math.PI * 0.38;
+  const mid = new T.Mesh(
+    new T.TorusGeometry(radius * 0.85, 0.1, 6, 26, Math.PI * 0.68),
+    new T.MeshBasicMaterial({ color: 0xff5a8a, transparent: true, opacity: 0.9, depthWrite: false, blending: T.AdditiveBlending })
+  );
+  mid.rotation.x = Math.PI / 2;
+  mid.rotation.z = -Math.PI * 0.34;
   const inner = new T.Mesh(
-    new T.TorusGeometry(radius * 0.84, 0.08, 6, 24, Math.PI * 0.65),
-    new T.MeshBasicMaterial({ color: 0xff628f, transparent: true, opacity: 0.85, depthWrite: false, blending: T.AdditiveBlending })
+    new T.TorusGeometry(radius * 0.7, 0.065, 6, 22, Math.PI * 0.58),
+    new T.MeshBasicMaterial({ color: 0xfff7d6, transparent: true, opacity: 0.95, depthWrite: false, blending: T.AdditiveBlending })
   );
   inner.rotation.x = Math.PI / 2;
-  inner.rotation.z = -Math.PI * 0.325;
-  g.add(arc, inner);
+  inner.rotation.z = -Math.PI * 0.29;
+  g.add(arc, mid, inner);
   return g;
 }
 

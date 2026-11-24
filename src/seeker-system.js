@@ -58,9 +58,9 @@ export function createSeekerSystem(scene, {wallDistance, onHit, onLock=()=>{}, o
     for(const {e} of candidates){if(locks.length>=Math.min(3,ammo))break;if(!locks.some(l=>l.e===e))locks.push({e,progress:Math.min(1,dt/(evolution?.lockTime??SEEKER.lockTime)),memory:SEEKER.memory});}
     locks=locks.slice(0,Math.min(3,ammo));
   }
-  function launch({origins,directions,ammo,power=1,evolution=null,attackId=-1}) {
-    const targets=locks.filter(l=>l.progress>=1&&l.e.hp>0).map(l=>l.e);
-    const count=Math.min(targets.length||1,ammo,pool.filter(m=>m.life<=0).length,3);
+  function launch({origins,directions,ammo,power=1,evolution=null,attackId=-1,forcedTargets=null}) {
+    const targets=forcedTargets?forcedTargets.filter(t=>t&&t.hp>0):locks.filter(l=>l.progress>=1&&l.e.hp>0).map(l=>l.e);
+    const count=Math.min(forcedTargets?Math.max(1,targets.length,2):(targets.length||1),ammo,pool.filter(m=>m.life<=0).length,3);
     if(!count)return [];
     const launched=[];
     for(let i=0;i<count;i++){
@@ -72,7 +72,7 @@ export function createSeekerSystem(scene, {wallDistance, onHit, onLock=()=>{}, o
       m.mesh.quaternion.setFromUnitVectors(forward,m.dir);m.mesh.visible=m.wake.visible=true;
       m.history.forEach(p=>p.copy(m.mesh.position));launched.push(cell);
     }
-    shots+=count;locks=[];return launched;
+    shots+=count;if(!forcedTargets)locks=[];return launched;
   }
   function impact(position,normal){
     const f=impacts.find(f=>f.life<=0)||impacts.reduce((a,b)=>a.life<b.life?a:b);

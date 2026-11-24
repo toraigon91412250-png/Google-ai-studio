@@ -1,4 +1,4 @@
-// Pure deterministic rules, weapon specs, enemy archetypes, 18 relic cards, and 2-phase boss logic for Ψ / ABYSS PROTOCOL.
+// Pure deterministic rules, weapon specs, enemy archetypes, 21 relic cards, and 2-phase boss logic for Ψ / ABYSS PROTOCOL.
 
 export const ABYSS_STORAGE_KEY = 'overdrive-abyss-v1';
 
@@ -142,10 +142,10 @@ export const ABYSS_ENEMIES = {
   architect: {
     id: 'architect',
     label: 'VOID ARCHITECT / 虚空設計機',
-    hp: 3800,
-    phase2Ratio: 0.55,
-    speed: 2.35,
-    enragedSpeed: 3.1,
+    hp: 7400,
+    phase2Ratio: 0.58,
+    speed: 2.5,
+    enragedSpeed: 3.35,
     r: 2.55,
     xp: 120,
     color: 0xff6ad5
@@ -156,9 +156,9 @@ export const ABYSS_WAVES = [
   ['stalker', 'splitter', 'weaver', 'stalker', 'splitter', 'weaver'],
   ['aegis', 'stalker', 'weaver', 'splitter', 'aegis', 'stalker', 'weaver'],
   ['aegis', 'weaver', 'stalker', 'splitter', 'aegis', 'weaver', 'stalker', 'splitter', 'aegis'],
-  ['splitter', 'stalker', 'weaver', 'aegis', 'splitter', 'stalker', 'weaver', 'aegis', 'stalker', 'weaver'],
-  ['aegis', 'aegis', 'weaver', 'splitter', 'stalker', 'weaver', 'aegis', 'splitter', 'stalker', 'weaver', 'aegis'],
-  ['architect', 'weaver', 'stalker', 'aegis']
+  ['splitter', 'stalker', 'weaver', 'aegis', 'splitter', 'stalker', 'weaver', 'aegis', 'stalker', 'weaver', 'aegis'],
+  ['aegis', 'aegis', 'weaver', 'splitter', 'stalker', 'weaver', 'aegis', 'splitter', 'stalker', 'weaver', 'aegis', 'stalker'],
+  ['architect', 'weaver', 'stalker', 'aegis', 'splitter']
 ];
 
 export const ABYSS_SECTOR_TITLES = [
@@ -355,6 +355,37 @@ export const ABYSS_UPGRADES = [
     trigger: '致死ダメージ時・常時',
     detail: '常時全ダメージ +20%。戦闘中1回だけ致死攻撃を耐久35%+2.5s無敵+周囲大爆破で耐える。',
     maxLevel: 1
+  },
+  // --- ABSORBED PROTOCOLS: CHRONO / KINETIC ARM / MIRROR MATRIX (3 cards) ---
+  {
+    id: 'abyss_chrono',
+    tag: 'TIME PROTOCOL · [Q]',
+    name: 'CHRONO PROTOCOL',
+    jpName: '時空減速装置',
+    target: '特殊能力 [Q]（最大1）',
+    trigger: '取得時100%・撃破+12%',
+    detail: '[Q] / BREAKボタンで 3.6秒間 敵と敵弾を0.22倍速に減速し、与ダメージ 1.35倍＋全武器即時装填。',
+    maxLevel: 1
+  },
+  {
+    id: 'abyss_kinetic_arm',
+    tag: 'SIPHON ARM · [F]',
+    name: 'KINETIC SIPHON ARM',
+    jpName: '運動捕捉義手',
+    target: '特殊能力 [F]（最大1）',
+    trigger: '正面4.2m / ダッシュ中2.2m',
+    detail: '[F] / 捕獲ボタンで敵弾を最大6発吸収し、再発動で自動追尾レーザー一斉返撃（6発で衝撃波）。',
+    maxLevel: 1
+  },
+  {
+    id: 'abyss_reflect',
+    tag: 'DEFLECT MATRIX',
+    name: 'MIRROR MATRIX',
+    jpName: '反撃鏡面機構',
+    target: 'GEAR II/III ダッシュ反射',
+    trigger: 'SHIFT 弾反射時（最大1）',
+    detail: 'GEAR II/IIIのダッシュ弾反射の反撃数 +1・反撃威力 +65%、さらに反射1発ごとに耐久 +3回復。',
+    maxLevel: 1
   }
 ];
 
@@ -468,48 +499,48 @@ export function advanceArchitectCycle(bossState, dt, hpRatio = 1) {
     bossState.enraged = true;
     bossState.phase = 'spiral';
     bossState.spiralShots = 0;
-    bossState.timer = 0.35;
-    events.push({ type: 'awaken', radius: 18, damage: 22 });
+    bossState.timer = 0.3;
+    events.push({ type: 'awaken', radius: 20, damage: 26 });
     return events;
   }
 
-  const pace = bossState.enraged ? 1.28 : 1;
+  const pace = bossState.enraged ? 1.46 : 1;
   bossState.timer -= dt * pace;
 
   if (bossState.phase === 'spiral') {
-    const burstTarget = bossState.enraged ? 4 : 3;
+    const burstTarget = bossState.enraged ? 5 : 3;
     while (bossState.timer <= 0 && bossState.spiralShots < burstTarget) {
       bossState.spiralShots += 1;
-      bossState.spiralAngle += bossState.enraged ? 0.34 : 0.42;
+      bossState.spiralAngle += bossState.enraged ? 0.31 : 0.4;
       events.push({
         type: 'spiral',
         angleOffset: bossState.spiralAngle,
-        count: bossState.enraged ? 12 : 9,
-        speed: bossState.enraged ? 15.2 : 13.5,
+        count: bossState.enraged ? 14 : 10,
+        speed: bossState.enraged ? 16.5 : 14.5,
         counterRing: bossState.enraged
       });
-      bossState.timer += 0.52;
+      bossState.timer += bossState.enraged ? 0.46 : 0.52;
     }
     if (bossState.spiralShots >= burstTarget && bossState.timer <= 0) {
       bossState.phase = 'mortars';
-      bossState.timer = 1.05;
+      bossState.timer = 1.0;
       events.push({
         type: 'mortars',
-        count: bossState.enraged ? 6 : 4,
-        delay: bossState.enraged ? 0.92 : 1.05,
-        radius: bossState.enraged ? 3.3 : 3.0,
-        damage: bossState.enraged ? 26 : 22
+        count: bossState.enraged ? 7 : 5,
+        delay: bossState.enraged ? 0.72 : 0.96,
+        radius: bossState.enraged ? 3.5 : 3.1,
+        damage: bossState.enraged ? 28 : 24
       });
     }
   } else if (bossState.phase === 'mortars') {
     if (bossState.timer <= 0) {
       bossState.phase = 'pulse';
-      bossState.timer = 1.15;
+      bossState.timer = 1.1;
       events.push({
         type: 'gravity_pulse',
-        strength: bossState.enraged ? 8.5 : 6.8,
+        strength: bossState.enraged ? 9.8 : 7.4,
         shockwave: true,
-        damage: bossState.enraged ? 26 : 20
+        damage: bossState.enraged ? 28 : 22
       });
     }
   } else if (bossState.phase === 'pulse') {
@@ -518,19 +549,20 @@ export function advanceArchitectCycle(bossState, dt, hpRatio = 1) {
       bossState.timer = bossState.enraged ? 1.45 : 1.25;
       events.push({
         type: 'laser_sweep',
-        delay: bossState.enraged ? 0.78 : 0.88,
-        damage: bossState.enraged ? 30 : 24,
-        twin: bossState.enraged
+        delay: bossState.enraged ? 0.74 : 0.84,
+        damage: bossState.enraged ? 32 : 26,
+        twin: bossState.enraged,
+        triple: bossState.enraged
       });
     }
   } else if (bossState.phase === 'laser') {
     if (bossState.timer <= 0) {
       bossState.phase = 'exposed';
-      bossState.timer = bossState.enraged ? 2.25 : 2.55;
+      bossState.timer = bossState.enraged ? 1.95 : 2.3;
       events.push({
         type: 'exposed',
         duration: bossState.timer,
-        summon: bossState.enraged ? ['stalker', 'splitter'] : ['stalker']
+        summon: bossState.enraged ? ['stalker', 'splitter', 'weaver'] : ['stalker']
       });
     }
   } else if (bossState.phase === 'exposed') {
@@ -538,7 +570,7 @@ export function advanceArchitectCycle(bossState, dt, hpRatio = 1) {
       bossState.cycleIndex += 1;
       bossState.phase = 'spiral';
       bossState.spiralShots = 0;
-      bossState.timer = 0.45;
+      bossState.timer = 0.42;
     }
   }
   return events;
